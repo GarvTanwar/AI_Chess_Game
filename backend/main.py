@@ -14,8 +14,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        "https://*.vercel.app",   # Vercel preview/production domains
-        # Add your custom domain here once you set it up
+        "https://ai-chess-game-eight.vercel.app",  # Your Vercel domain
+        # Add more Vercel preview URLs or custom domains as needed
     ],
     allow_credentials=True,
     allow_methods=["*"],
