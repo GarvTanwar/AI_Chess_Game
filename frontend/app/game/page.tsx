@@ -217,9 +217,9 @@ export default function GamePage() {
           const newStats = {
             ...stats,
             wins: stats.wins + 1,
-            unlockedLevels: stats.unlockedLevels.includes(selectedLevel + 1)
+            unlockedLevels: selectedLevel !== null && stats.unlockedLevels.includes(selectedLevel + 1)
               ? stats.unlockedLevels
-              : selectedLevel < 5
+              : selectedLevel !== null && selectedLevel < 5
               ? [...stats.unlockedLevels, selectedLevel + 1]
               : stats.unlockedLevels,
           };
