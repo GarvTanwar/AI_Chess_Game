@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import Link from 'next/link';
-import { getAIMove, getOpponents, type Opponent } from '../../lib/api';
+import { getAIMove, getOpponents, warmupBackend, type Opponent } from '../../lib/api';
 
 interface GameStats {
   wins: number;
@@ -31,6 +31,9 @@ export default function GamePage() {
   const [illegalMoveMessage, setIllegalMoveMessage] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [capturedPieces, setCapturedPieces] = useState<{ white: string[]; black: string[] }>({ white: [], black: [] });
+  const [isBackendWarming, setIsBackendWarming] = useState(true);
+  const [backendReady, setBackendReady] = useState(false);
+  const [warmupAttempts, setWarmupAttempts] = useState(0);
 
   useEffect(() => {
     // Load stats from localStorage
@@ -57,6 +60,28 @@ export default function GamePage() {
     return () => window.removeEventListener('resize', updateBoardWidth);
   }, []);
 
+  // Warm up backend on page load
+  useEffect(() => {
+    const warmup = async () => {
+      setIsBackendWarming(true);
+      setWarmupAttempts((prev) => prev + 1);
+
+      const result = await warmupBackend(10000);
+
+      if (result.success) {
+        console.log(`Backend warmed up in ${result.duration.toFixed(0)}ms`);
+        setBackendReady(true);
+        setIsBackendWarming(false);
+      } else {
+        console.error(`Backend warmup failed after ${result.duration.toFixed(0)}ms`);
+        setBackendReady(false);
+        setIsBackendWarming(false);
+      }
+    };
+
+    warmup();
+  }, []);
+
   const saveStats = (newStats: GameStats) => {
     setStats(newStats);
     localStorage.setItem('chessGameStats', JSON.stringify(newStats));
@@ -66,6 +91,23 @@ export default function GamePage() {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
     localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+  };
+
+  const retryBackendWarmup = async () => {
+    setIsBackendWarming(true);
+    setWarmupAttempts((prev) => prev + 1);
+
+    const result = await warmupBackend(10000);
+
+    if (result.success) {
+      console.log(`Backend warmed up in ${result.duration.toFixed(0)}ms (attempt ${warmupAttempts + 1})`);
+      setBackendReady(true);
+      setIsBackendWarming(false);
+    } else {
+      console.error(`Backend warmup failed after ${result.duration.toFixed(0)}ms (attempt ${warmupAttempts + 1})`);
+      setBackendReady(false);
+      setIsBackendWarming(false);
+    }
   };
 
   const getPieceSymbol = (piece: string, isWhite: boolean) => {
@@ -297,6 +339,53 @@ export default function GamePage() {
           }`}>
             <h2 className={`text-lg sm:text-xl font-semibold mb-3 sm:mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Game Mode</h2>
 
+            {/* Backend Warmup Status */}
+            {isBackendWarming && (
+              <div className={`mb-4 p-3 rounded-lg border ${
+                isDarkMode
+                  ? 'bg-blue-500/20 border-blue-400/30 text-blue-200'
+                  : 'bg-blue-100 border-blue-300 text-blue-800'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin">⏳</div>
+                  <div className="text-sm">Waking up server...</div>
+                </div>
+              </div>
+            )}
+
+            {!isBackendWarming && !backendReady && (
+              <div className={`mb-4 p-3 rounded-lg border ${
+                isDarkMode
+                  ? 'bg-red-500/20 border-red-400/30 text-red-200'
+                  : 'bg-red-100 border-red-300 text-red-800'
+              }`}>
+                <div className="text-sm mb-2">Server not responding</div>
+                <button
+                  onClick={retryBackendWarmup}
+                  className={`text-xs px-3 py-1 rounded transition-all ${
+                    isDarkMode
+                      ? 'bg-red-400/30 hover:bg-red-400/50 border border-red-400/50'
+                      : 'bg-red-200 hover:bg-red-300 border border-red-400'
+                  }`}
+                >
+                  Retry Connection
+                </button>
+              </div>
+            )}
+
+            {!isBackendWarming && backendReady && (
+              <div className={`mb-4 p-3 rounded-lg border ${
+                isDarkMode
+                  ? 'bg-green-500/20 border-green-400/30 text-green-200'
+                  : 'bg-green-100 border-green-300 text-green-800'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div>✓</div>
+                  <div className="text-sm">Server ready!</div>
+                </div>
+              </div>
+            )}
+
             {/* 2-Player Mode Button */}
             <button
               onClick={startHumanVsHumanGame}
@@ -335,7 +424,7 @@ export default function GamePage() {
                 <button
                   key={level}
                   onClick={() => startGame(Number(level))}
-                  disabled={!stats.unlockedLevels.includes(Number(level))}
+                  disabled={!stats.unlockedLevels.includes(Number(level)) || isBackendWarming || !backendReady}
                   className={`w-full p-3 rounded-xl text-left transition-all ${
                     stats.unlockedLevels.includes(Number(level))
                       ? selectedLevel === Number(level) && gameMode === 'ai'

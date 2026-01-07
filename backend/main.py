@@ -1,13 +1,32 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import chess
 import chess.engine
 import random
 import os
+import time
 from typing import Optional
 
 app = FastAPI()
+
+# Global Stockfish engine instance
+stockfish_engine = None
+startup_time = None
+
+# Timing middleware to log request duration
+@app.middleware("http")
+async def timing_middleware(request: Request, call_next):
+    start_time = time.time()
+    is_cold_start = startup_time is not None and (start_time - startup_time) < 2
+
+    response = await call_next(request)
+
+    duration = time.time() - start_time
+    print(f"[TIMING] {request.method} {request.url.path} - {duration:.3f}s" +
+          (" [COLD START]" if is_cold_start else ""))
+
+    return response
 
 # CORS middleware to allow Next.js frontend
 app.add_middleware(
@@ -48,9 +67,43 @@ class MoveResponse(BaseModel):
     is_stalemate: bool
     is_check: bool
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Stockfish engine once at startup"""
+    global stockfish_engine, startup_time
+    startup_time = time.time()
+    try:
+        print(f"[STARTUP] Initializing Stockfish at: {STOCKFISH_PATH}")
+        print(f"[STARTUP] File exists: {os.path.exists(STOCKFISH_PATH)}")
+        stockfish_engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+        print(f"[STARTUP] Stockfish initialized successfully in {time.time() - startup_time:.3f}s")
+    except Exception as e:
+        print(f"[STARTUP ERROR] Failed to initialize Stockfish: {e}")
+        stockfish_engine = None
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up Stockfish engine on shutdown"""
+    global stockfish_engine
+    if stockfish_engine is not None:
+        try:
+            print("[SHUTDOWN] Closing Stockfish engine")
+            stockfish_engine.quit()
+        except Exception as e:
+            print(f"[SHUTDOWN ERROR] Failed to close Stockfish: {e}")
+
 @app.get("/")
 def read_root():
     return {"message": "Chess AI Backend is running!"}
+
+@app.get("/health")
+def health_check():
+    """Lightweight health check endpoint for warming up the backend"""
+    return {
+        "status": "ok",
+        "stockfish_ready": stockfish_engine is not None,
+        "uptime_seconds": time.time() - startup_time if startup_time else 0
+    }
 
 @app.get("/opponents")
 def get_opponents():
@@ -79,14 +132,11 @@ async def get_ai_move(request: MoveRequest):
 
         print(f"AI (Black) is making a move...")
 
-        # Initialize Stockfish engine
-        print(f"Attempting to open Stockfish at: {STOCKFISH_PATH}")
-        print(f"File exists: {os.path.exists(STOCKFISH_PATH)}")
+        # Check if Stockfish engine is available
+        if stockfish_engine is None:
+            raise HTTPException(status_code=503, detail="Stockfish engine not initialized")
 
-        engine = None
         try:
-            engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
-
             # Determine if AI should make a blunder
             make_blunder = random.random() < opponent["blunder_chance"]
             legal_moves = list(board.legal_moves)
@@ -96,8 +146,8 @@ async def get_ai_move(request: MoveRequest):
                 move = random.choice(legal_moves)
                 print(f"AI making a blunder move: {move.uci()}")
             else:
-                # Get best move from Stockfish
-                result = engine.play(board, chess.engine.Limit(depth=opponent["depth"]))
+                # Get best move from Stockfish (reusing global engine)
+                result = stockfish_engine.play(board, chess.engine.Limit(depth=opponent["depth"]))
                 move = result.move
                 print(f"AI making best move: {move.uci()}")
 
@@ -115,9 +165,6 @@ async def get_ai_move(request: MoveRequest):
         except chess.engine.EngineTerminatedError:
             print("Stockfish terminated unexpectedly")
             raise HTTPException(status_code=500, detail="Stockfish terminated unexpectedly")
-        finally:
-            if engine is not None:
-                engine.quit()
 
     except HTTPException:
         raise

@@ -42,3 +42,30 @@ export async function validateMove(fen: string, move: string) {
   if (!response.ok) throw new Error('Failed to validate move');
   return response.json();
 }
+
+export async function warmupBackend(timeoutMs: number = 10000): Promise<{ success: boolean; duration: number }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const startTime = performance.now();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const duration = performance.now() - startTime;
+
+    if (!response.ok) {
+      return { success: false, duration };
+    }
+
+    return { success: true, duration };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    const duration = performance.now() - startTime;
+    console.error('Backend warmup failed:', error);
+    return { success: false, duration };
+  }
+}
