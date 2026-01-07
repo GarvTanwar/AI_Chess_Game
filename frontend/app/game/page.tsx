@@ -26,9 +26,10 @@ export default function GamePage() {
     unlockedLevels: [1, 2, 3, 4, 5], // All levels unlocked
   });
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
-  const [boardWidth, setBoardWidth] = useState(600);
+  const [boardWidth, setBoardWidth] = useState(450);
   const [illegalMoveMessage, setIllegalMoveMessage] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [capturedPieces, setCapturedPieces] = useState<{ white: string[]; black: string[] }>({ white: [], black: [] });
 
   useEffect(() => {
     // Load stats from localStorage
@@ -48,7 +49,7 @@ export default function GamePage() {
 
     // Set board width based on window size
     const updateBoardWidth = () => {
-      setBoardWidth(Math.min(600, window.innerWidth - 100));
+      setBoardWidth(Math.min(450, window.innerWidth - 100));
     };
     updateBoardWidth();
     window.addEventListener('resize', updateBoardWidth);
@@ -66,6 +67,18 @@ export default function GamePage() {
     localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
   };
 
+  const getPieceSymbol = (piece: string, isWhite: boolean) => {
+    const symbols: { [key: string]: { white: string; black: string } } = {
+      p: { white: '♙', black: '♟' },
+      n: { white: '♘', black: '♞' },
+      b: { white: '♗', black: '♝' },
+      r: { white: '♖', black: '♜' },
+      q: { white: '♕', black: '♛' },
+      k: { white: '♔', black: '♚' },
+    };
+    return isWhite ? symbols[piece.toLowerCase()]?.white : symbols[piece.toLowerCase()]?.black;
+  };
+
   const startGame = (level: number) => {
     const newGame = new Chess();
     setGame(newGame);
@@ -73,6 +86,7 @@ export default function GamePage() {
     setGameStatus('');
     setIsPlayerTurn(true);
     setMoveHistory([]);
+    setCapturedPieces({ white: [], black: [] });
   };
 
   const makeAIMove = async (fenAfterPlayerMove: string) => {
@@ -82,6 +96,18 @@ export default function GamePage() {
 
     try {
       const response = await getAIMove(fenAfterPlayerMove, selectedLevel);
+
+      // Track AI captures
+      const tempGame = new Chess(fenAfterPlayerMove);
+      const aiMoveObj = tempGame.move(response.move);
+      if (aiMoveObj && aiMoveObj.captured) {
+        const capturedPiece = aiMoveObj.captured;
+        setCapturedPieces((prev) => ({
+          ...prev,
+          white: [...prev.white, capturedPiece],
+        }));
+      }
+
       const newGame = new Chess(response.fen);
       setGame(newGame);
       setMoveHistory((prev) => [...prev, response.move]);
@@ -137,6 +163,15 @@ export default function GamePage() {
 
       console.log('Move successful:', move.san);
 
+      // Track player captures
+      if (move.captured) {
+        const capturedPiece = move.captured;
+        setCapturedPieces((prev) => ({
+          ...prev,
+          black: [...prev.black, capturedPiece],
+        }));
+      }
+
       setGame(gameCopy);
       setMoveHistory((prev) => [...prev, move.san]);
       setIsPlayerTurn(false);
@@ -188,6 +223,11 @@ export default function GamePage() {
     setGameStatus('');
     setIsPlayerTurn(true);
     setMoveHistory(moveHistory.slice(0, -2));
+    // Remove last captured pieces (if any)
+    setCapturedPieces((prev) => ({
+      white: prev.white.slice(0, -1),
+      black: prev.black.slice(0, -1),
+    }));
   };
 
   return (
@@ -294,134 +334,184 @@ export default function GamePage() {
             </div>
           </div>
 
-          {/* Chess Board */}
+          {/* Chess Board and Game Area */}
           <div className="lg:col-span-2">
             {selectedLevel ? (
-              <div>
-                <div className={`backdrop-blur-md shadow-lg p-4 md:p-6 rounded-2xl mb-4 ${
-                  isDarkMode
-                    ? 'bg-white/10 border border-white/20'
-                    : 'bg-white/70 border border-white/60'
-                }`}>
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                      <h3 className={`text-lg md:text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        vs {opponents[selectedLevel]?.name}
-                      </h3>
-                      <div className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>You: White ♔</span> · <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{opponents[selectedLevel]?.name}: Black ♚</span>
-                      </div>
-                    </div>
-                    <div className={`flex items-center gap-3 px-4 py-2 rounded-lg shadow-md ${
-                      isDarkMode
-                        ? 'bg-white/10 border border-white/20'
-                        : 'bg-white/70 border border-white/60'
-                    }`}>
-                      <div className="text-2xl">
-                        {isPlayerTurn ? '♔' : '♚'}
-                      </div>
-                      <div>
-                        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Turn</div>
-                        <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {isPlayerTurn ? 'Your move' : 'AI thinking...'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {gameStatus && (
-                    <div className={`mt-3 p-3 rounded-lg text-center font-semibold ${
-                      gameStatus.includes('won')
-                        ? isDarkMode
-                          ? 'bg-green-900/30 text-green-400 border border-green-500/50'
-                          : 'bg-green-100 text-green-700 border border-green-200'
-                        : gameStatus.includes('lost')
-                        ? isDarkMode
-                          ? 'bg-red-900/30 text-red-400 border border-red-500/50'
-                          : 'bg-red-100 text-red-700 border border-red-200'
-                        : isDarkMode
-                        ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-500/50'
-                        : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                    }`}>
-                      {gameStatus}
-                    </div>
-                  )}
-                  {illegalMoveMessage && (
-                    <div className={`mt-3 p-3 rounded-lg text-center font-semibold animate-pulse ${
-                      isDarkMode
-                        ? 'bg-red-900/30 text-red-400 border border-red-500/50'
-                        : 'bg-red-100 text-red-700 border border-red-200'
-                    }`}>
-                      ❌ {illegalMoveMessage}
-                    </div>
-                  )}
-                </div>
-
-                <div className={`backdrop-blur-md shadow-lg p-4 rounded-2xl mb-4 flex justify-center ${
-                  isDarkMode
-                    ? 'bg-white/10 border border-white/20'
-                    : 'bg-white/70 border border-white/60'
-                }`}>
-                  <div style={{ maxWidth: boardWidth }}>
-                    <Chessboard
-                      options={{
-                        position: game.fen(),
-                        onPieceDrop: onDrop,
-                        boardOrientation: 'white',
-                        allowDragging: isPlayerTurn,
-                        showNotation: true,
-                        boardStyle: {
-                          borderRadius: '12px',
-                        },
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={undoMove}
-                    disabled={moveHistory.length < 2 || !isPlayerTurn}
-                    className={`flex-1 px-4 py-3 rounded-xl transition-all shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isDarkMode
-                        ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-white disabled:bg-white/5'
-                        : 'bg-white/70 hover:bg-white/90 border border-white/60 text-gray-900 disabled:bg-gray-100'
-                    }`}
-                  >
-                    ↶ Undo
-                  </button>
-                  <button
-                    onClick={() => startGame(selectedLevel)}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl transition-all shadow-lg font-medium"
-                  >
-                    New Game
-                  </button>
-                </div>
-
-                {moveHistory.length > 0 && (
-                  <div className={`mt-4 backdrop-blur-md shadow-lg p-4 rounded-2xl ${
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Left: Board and Controls */}
+                <div className="lg:col-span-2">
+                  <div className={`backdrop-blur-md shadow-lg p-4 md:p-6 rounded-2xl mb-4 ${
                     isDarkMode
                       ? 'bg-white/10 border border-white/20'
                       : 'bg-white/70 border border-white/60'
                   }`}>
-                    <h3 className={`font-semibold mb-3 flex items-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      <span className="mr-2">📜</span> Move History
-                    </h3>
-                    <div className="text-sm max-h-48 overflow-y-auto space-y-1">
-                      {Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, i) => {
-                        const whiteMove = moveHistory[i * 2];
-                        const blackMove = moveHistory[i * 2 + 1];
-                        return (
-                          <div key={i} className={`flex items-center py-2 rounded-lg px-3 transition-colors ${
-                            isDarkMode ? 'hover:bg-white/10' : 'hover:bg-white/50'
-                          }`}>
-                            <span className={`w-8 font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{i + 1}.</span>
-                            <span className={`font-medium w-24 font-mono ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{whiteMove}</span>
-                            {blackMove && (
-                              <span className={`w-24 font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{blackMove}</span>
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div>
+                        <h3 className={`text-lg md:text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          vs {opponents[selectedLevel]?.name}
+                        </h3>
+                        <div className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>You: White ♔</span> · <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{opponents[selectedLevel]?.name}: Black ♚</span>
+                        </div>
+                      </div>
+                      <div className={`flex items-center gap-3 px-4 py-2 rounded-lg shadow-md ${
+                        isDarkMode
+                          ? 'bg-white/10 border border-white/20'
+                          : 'bg-white/70 border border-white/60'
+                      }`}>
+                        <div className="text-2xl">
+                          {isPlayerTurn ? '♔' : '♚'}
+                        </div>
+                        <div>
+                          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Turn</div>
+                          <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {isPlayerTurn ? 'Your move' : 'AI thinking...'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {gameStatus && (
+                      <div className={`mt-3 p-3 rounded-lg text-center font-semibold ${
+                        gameStatus.includes('won')
+                          ? isDarkMode
+                            ? 'bg-green-900/30 text-green-400 border border-green-500/50'
+                            : 'bg-green-100 text-green-700 border border-green-200'
+                          : gameStatus.includes('lost')
+                          ? isDarkMode
+                            ? 'bg-red-900/30 text-red-400 border border-red-500/50'
+                            : 'bg-red-100 text-red-700 border border-red-200'
+                          : isDarkMode
+                          ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-500/50'
+                          : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                      }`}>
+                        {gameStatus}
+                      </div>
+                    )}
+                    {illegalMoveMessage && (
+                      <div className={`mt-3 p-3 rounded-lg text-center font-semibold animate-pulse ${
+                        isDarkMode
+                          ? 'bg-red-900/30 text-red-400 border border-red-500/50'
+                          : 'bg-red-100 text-red-700 border border-red-200'
+                      }`}>
+                        ❌ {illegalMoveMessage}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`backdrop-blur-md shadow-lg p-4 rounded-2xl mb-4 flex justify-center ${
+                    isDarkMode
+                      ? 'bg-white/10 border border-white/20'
+                      : 'bg-white/70 border border-white/60'
+                  }`}>
+                    <div style={{ maxWidth: boardWidth }}>
+                      <Chessboard
+                        options={{
+                          position: game.fen(),
+                          onPieceDrop: onDrop,
+                          boardOrientation: 'white',
+                          allowDragging: isPlayerTurn,
+                          showNotation: true,
+                          boardStyle: {
+                            borderRadius: '12px',
+                          },
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={undoMove}
+                      disabled={moveHistory.length < 2 || !isPlayerTurn}
+                      className={`flex-1 px-4 py-3 rounded-xl transition-all shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isDarkMode
+                          ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-white disabled:bg-white/5'
+                          : 'bg-white/70 hover:bg-white/90 border border-white/60 text-gray-900 disabled:bg-gray-100'
+                      }`}
+                    >
+                      ↶ Undo
+                    </button>
+                    <button
+                      onClick={() => startGame(selectedLevel)}
+                      className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl transition-all shadow-lg font-medium"
+                    >
+                      New Game
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right: Move History and Captured Pieces */}
+                {moveHistory.length > 0 && (
+                  <div className="space-y-4">
+                    {/* Move History */}
+                    <div className={`backdrop-blur-md shadow-lg p-4 rounded-2xl ${
+                      isDarkMode
+                        ? 'bg-white/10 border border-white/20'
+                        : 'bg-white/70 border border-white/60'
+                    }`}>
+                      <h3 className={`font-semibold mb-3 flex items-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <span className="mr-2">📜</span> Move History
+                      </h3>
+                      <div className="text-sm max-h-64 overflow-y-auto space-y-1">
+                        {Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, i) => {
+                          const whiteMove = moveHistory[i * 2];
+                          const blackMove = moveHistory[i * 2 + 1];
+                          return (
+                            <div key={i} className={`flex items-center py-2 rounded-lg px-3 transition-colors ${
+                              isDarkMode ? 'hover:bg-white/10' : 'hover:bg-white/50'
+                            }`}>
+                              <span className={`w-8 font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{i + 1}.</span>
+                              <span className={`font-medium w-20 font-mono ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{whiteMove}</span>
+                              {blackMove && (
+                                <span className={`w-20 font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{blackMove}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Captured Pieces */}
+                    <div className={`backdrop-blur-md shadow-lg p-4 rounded-2xl ${
+                      isDarkMode
+                        ? 'bg-white/10 border border-white/20'
+                        : 'bg-white/70 border border-white/60'
+                    }`}>
+                      <h3 className={`font-semibold mb-3 flex items-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <span className="mr-2">⚔️</span> Captured Pieces
+                      </h3>
+                      <div className="space-y-3">
+                        {/* Captured by White (Player) */}
+                        <div>
+                          <div className={`text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            You captured:
+                          </div>
+                          <div className="text-2xl flex flex-wrap gap-1">
+                            {capturedPieces.black.length > 0 ? (
+                              capturedPieces.black.map((piece, index) => (
+                                <span key={index}>{getPieceSymbol(piece, false)}</span>
+                              ))
+                            ) : (
+                              <span className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>None</span>
                             )}
                           </div>
-                        );
-                      })}
+                        </div>
+                        {/* Captured by Black (AI) */}
+                        <div>
+                          <div className={`text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {opponents[selectedLevel]?.name} captured:
+                          </div>
+                          <div className="text-2xl flex flex-wrap gap-1">
+                            {capturedPieces.white.length > 0 ? (
+                              capturedPieces.white.map((piece, index) => (
+                                <span key={index}>{getPieceSymbol(piece, true)}</span>
+                              ))
+                            ) : (
+                              <span className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>None</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

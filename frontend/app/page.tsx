@@ -127,7 +127,17 @@ export default function Home() {
             <span>Start Playing</span>
             <span>→</span>
           </Link>
-          <p className={`text-xs sm:text-sm mt-4 sm:mt-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className="mt-4 sm:mt-6">
+            <Link
+              href="/how-to-play"
+              className={`text-sm sm:text-base underline hover:no-underline transition-all ${
+                isDarkMode ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700'
+              }`}
+            >
+              How to Play & Rules
+            </Link>
+          </div>
+          <p className={`text-xs sm:text-sm mt-2 sm:mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Powered by Stockfish Engine
           </p>
         </div>
