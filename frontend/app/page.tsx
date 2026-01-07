@@ -81,7 +81,7 @@ export default function Home() {
 
         {/* Features */}
         <div className="mb-8 sm:mb-16">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <div className={`backdrop-blur-md shadow-lg rounded-xl p-5 sm:p-6 hover:shadow-xl transition-all ${
               isDarkMode
                 ? 'bg-white/10 border border-white/20'
@@ -98,7 +98,18 @@ export default function Home() {
                 ? 'bg-white/10 border border-white/20'
                 : 'bg-white/70 border border-white/60'
             }`}>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 shadow-md">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 shadow-md">
+                👥
+              </div>
+              <h3 className={`text-base sm:text-lg font-semibold mb-1 sm:mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>2 Player Mode</h3>
+              <p className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Play against friends on same device</p>
+            </div>
+            <div className={`backdrop-blur-md shadow-lg rounded-xl p-5 sm:p-6 hover:shadow-xl transition-all ${
+              isDarkMode
+                ? 'bg-white/10 border border-white/20'
+                : 'bg-white/70 border border-white/60'
+            }`}>
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 shadow-md">
                 🔓
               </div>
               <h3 className={`text-base sm:text-lg font-semibold mb-1 sm:mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Play Freely</h3>
@@ -109,7 +120,7 @@ export default function Home() {
                 ? 'bg-white/10 border border-white/20'
                 : 'bg-white/70 border border-white/60'
             }`}>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 shadow-md">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-pink-500 to-red-600 rounded-lg flex items-center justify-center text-xl sm:text-2xl mb-3 sm:mb-4 shadow-md">
                 📊
               </div>
               <h3 className={`text-base sm:text-lg font-semibold mb-1 sm:mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Track Progress</h3>
@@ -118,8 +129,53 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Quick Rules */}
+        <div className="mb-8 sm:mb-16">
+          <h2 className={`text-2xl sm:text-3xl font-bold mb-2 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Quick Rules</h2>
+          <p className={`text-sm sm:text-base text-center mb-4 sm:mb-6 px-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Learn the basics to get started</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <div className={`backdrop-blur-md shadow-lg rounded-xl p-5 sm:p-6 hover:shadow-xl transition-all ${
+              isDarkMode
+                ? 'bg-white/10 border border-white/20'
+                : 'bg-white/70 border border-white/60'
+            }`}>
+              <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 text-center">♔</div>
+              <h3 className={`text-base sm:text-lg font-semibold mb-1 sm:mb-2 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Objective</h3>
+              <p className={`text-xs sm:text-sm text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Checkmate the opponent's king to win the game</p>
+            </div>
+            <div className={`backdrop-blur-md shadow-lg rounded-xl p-5 sm:p-6 hover:shadow-xl transition-all ${
+              isDarkMode
+                ? 'bg-white/10 border border-white/20'
+                : 'bg-white/70 border border-white/60'
+            }`}>
+              <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 text-center">♙</div>
+              <h3 className={`text-base sm:text-lg font-semibold mb-1 sm:mb-2 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Turns</h3>
+              <p className={`text-xs sm:text-sm text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>White moves first, then players alternate turns</p>
+            </div>
+            <div className={`backdrop-blur-md shadow-lg rounded-xl p-5 sm:p-6 hover:shadow-xl transition-all ${
+              isDarkMode
+                ? 'bg-white/10 border border-white/20'
+                : 'bg-white/70 border border-white/60'
+            }`}>
+              <div className="text-5xl sm:text-6xl mb-3 sm:mb-4 text-center">♜</div>
+              <h3 className={`text-base sm:text-lg font-semibold mb-1 sm:mb-2 text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Piece Movement</h3>
+              <p className={`text-xs sm:text-sm text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Each piece has unique movement patterns</p>
+            </div>
+          </div>
+        </div>
+
         {/* CTA Button */}
         <div className="text-center pb-6">
+          <div className="mb-4 sm:mb-6">
+            <Link
+              href="/how-to-play"
+              className={`text-sm sm:text-base underline hover:no-underline transition-all ${
+                isDarkMode ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700'
+              }`}
+            >
+              Learn More About Chess Rules
+            </Link>
+          </div>
           <Link
             href="/game"
             className="inline-flex items-center gap-2 px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold text-base sm:text-lg rounded-full transition-all duration-300 transform hover:scale-105 shadow-xl shadow-purple-500/30"
@@ -127,17 +183,7 @@ export default function Home() {
             <span>Start Playing</span>
             <span>→</span>
           </Link>
-          <div className="mt-4 sm:mt-6">
-            <Link
-              href="/how-to-play"
-              className={`text-sm sm:text-base underline hover:no-underline transition-all ${
-                isDarkMode ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700'
-              }`}
-            >
-              How to Play & Rules
-            </Link>
-          </div>
-          <p className={`text-xs sm:text-sm mt-2 sm:mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`text-xs sm:text-sm mt-4 sm:mt-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Powered by Stockfish Engine
           </p>
         </div>

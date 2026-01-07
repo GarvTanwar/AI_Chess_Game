@@ -16,6 +16,7 @@ interface GameStats {
 export default function GamePage() {
   const [game, setGame] = useState(new Chess());
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [gameMode, setGameMode] = useState<'ai' | 'human' | null>(null); // 'ai' for vs AI, 'human' for 2-player
   const [opponents, setOpponents] = useState<Record<number, Opponent>>({});
   const [gameStatus, setGameStatus] = useState<string>('');
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
@@ -83,6 +84,18 @@ export default function GamePage() {
     const newGame = new Chess();
     setGame(newGame);
     setSelectedLevel(level);
+    setGameMode('ai');
+    setGameStatus('');
+    setIsPlayerTurn(true);
+    setMoveHistory([]);
+    setCapturedPieces({ white: [], black: [] });
+  };
+
+  const startHumanVsHumanGame = () => {
+    const newGame = new Chess();
+    setGame(newGame);
+    setSelectedLevel(0); // Use 0 to indicate 2-player mode
+    setGameMode('human');
     setGameStatus('');
     setIsPlayerTurn(true);
     setMoveHistory([]);
@@ -134,10 +147,20 @@ export default function GamePage() {
   const onDrop = ({ sourceSquare, targetSquare }: { piece: any; sourceSquare: string; targetSquare: string | null }) => {
     console.log('onDrop called:', { sourceSquare, targetSquare, isPlayerTurn });
 
-    if (!isPlayerTurn || !selectedLevel || !targetSquare) {
-      setIllegalMoveMessage('Wait for your turn!');
-      setTimeout(() => setIllegalMoveMessage(''), 2000);
+    if (!targetSquare) {
       return false;
+    }
+
+    // For 2-player mode, allow both players to move
+    if (gameMode === 'human') {
+      // In 2-player mode, both players can always move
+    } else {
+      // For AI mode, only allow moves on player's turn
+      if (!isPlayerTurn || !selectedLevel) {
+        setIllegalMoveMessage('Wait for your turn!');
+        setTimeout(() => setIllegalMoveMessage(''), 2000);
+        return false;
+      }
     }
 
     // Clear any previous illegal move message
@@ -163,39 +186,54 @@ export default function GamePage() {
 
       console.log('Move successful:', move.san);
 
-      // Track player captures
+      // Track captures based on whose turn it was
       if (move.captured) {
         const capturedPiece = move.captured;
-        setCapturedPieces((prev) => ({
-          ...prev,
-          black: [...prev.black, capturedPiece],
-        }));
+        if (game.turn() === 'w') {
+          // White just moved, so they captured a black piece
+          setCapturedPieces((prev) => ({
+            ...prev,
+            black: [...prev.black, capturedPiece],
+          }));
+        } else {
+          // Black just moved, so they captured a white piece
+          setCapturedPieces((prev) => ({
+            ...prev,
+            white: [...prev.white, capturedPiece],
+          }));
+        }
       }
 
       setGame(gameCopy);
       setMoveHistory((prev) => [...prev, move.san]);
-      setIsPlayerTurn(false);
       setGameStatus('');
 
       if (gameCopy.isCheckmate()) {
-        setGameStatus('Checkmate! You won!');
-        const newStats = {
-          ...stats,
-          wins: stats.wins + 1,
-          unlockedLevels: stats.unlockedLevels.includes(selectedLevel + 1)
-            ? stats.unlockedLevels
-            : selectedLevel < 5
-            ? [...stats.unlockedLevels, selectedLevel + 1]
-            : stats.unlockedLevels,
-        };
-        saveStats(newStats);
+        if (gameMode === 'human') {
+          const winner = game.turn() === 'w' ? 'Black' : 'White';
+          setGameStatus(`Checkmate! ${winner} wins!`);
+        } else {
+          setGameStatus('Checkmate! You won!');
+          const newStats = {
+            ...stats,
+            wins: stats.wins + 1,
+            unlockedLevels: stats.unlockedLevels.includes(selectedLevel + 1)
+              ? stats.unlockedLevels
+              : selectedLevel < 5
+              ? [...stats.unlockedLevels, selectedLevel + 1]
+              : stats.unlockedLevels,
+          };
+          saveStats(newStats);
+        }
         return true;
       }
 
       if (gameCopy.isStalemate()) {
         setGameStatus('Stalemate! It\'s a draw.');
-        const newStats = { ...stats, draws: stats.draws + 1 };
-        saveStats(newStats);
+        if (gameMode === 'ai') {
+          const newStats = { ...stats, draws: stats.draws + 1 };
+          saveStats(newStats);
+        }
         return true;
       }
 
@@ -203,9 +241,13 @@ export default function GamePage() {
         setGameStatus('Check!');
       }
 
-      // Pass the FEN AFTER the player's move to the AI
-      const fenAfterPlayerMove = gameCopy.fen();
-      setTimeout(() => makeAIMove(fenAfterPlayerMove), 500);
+      // For AI mode, make AI move
+      if (gameMode === 'ai') {
+        setIsPlayerTurn(false);
+        const fenAfterPlayerMove = gameCopy.fen();
+        setTimeout(() => makeAIMove(fenAfterPlayerMove), 500);
+      }
+
       return true;
     } catch (error) {
       console.error('Move error:', error);
@@ -215,20 +257,6 @@ export default function GamePage() {
     }
   };
 
-  const undoMove = () => {
-    const gameCopy = new Chess(game.fen());
-    gameCopy.undo(); // Undo AI move
-    gameCopy.undo(); // Undo player move
-    setGame(gameCopy);
-    setGameStatus('');
-    setIsPlayerTurn(true);
-    setMoveHistory(moveHistory.slice(0, -2));
-    // Remove last captured pieces (if any)
-    setCapturedPieces((prev) => ({
-      white: prev.white.slice(0, -1),
-      black: prev.black.slice(0, -1),
-    }));
-  };
 
   return (
     <div className={`min-h-screen p-3 sm:p-4 md:p-8 ${isDarkMode ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900' : 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50'}`}>
@@ -267,7 +295,41 @@ export default function GamePage() {
               ? 'bg-white/10 border border-white/20'
               : 'bg-white/70 border border-white/60'
           }`}>
-            <h2 className={`text-lg sm:text-xl font-semibold mb-3 sm:mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Opponent</h2>
+            <h2 className={`text-lg sm:text-xl font-semibold mb-3 sm:mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Game Mode</h2>
+
+            {/* 2-Player Mode Button */}
+            <button
+              onClick={startHumanVsHumanGame}
+              className={`w-full p-3 rounded-xl text-left transition-all mb-4 ${
+                selectedLevel === 0 && gameMode === 'human'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+                  : isDarkMode
+                  ? 'bg-white/10 hover:bg-white/20 border border-white/20 shadow-md'
+                  : 'bg-white/70 hover:bg-white/90 border border-white/60 shadow-md'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className={`font-semibold ${
+                    selectedLevel === 0 && gameMode === 'human'
+                      ? 'text-white'
+                      : isDarkMode
+                      ? 'text-white'
+                      : 'text-gray-900'
+                  }`}>2 Player Mode</div>
+                  <div className={`text-xs ${
+                    selectedLevel === 0 && gameMode === 'human'
+                      ? 'text-gray-100'
+                      : isDarkMode
+                      ? 'text-gray-300'
+                      : 'text-gray-600'
+                  }`}>Human vs Human</div>
+                </div>
+                <div className="text-2xl">👥</div>
+              </div>
+            </button>
+
+            <h3 className={`text-base sm:text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>VS AI</h3>
             <div className="space-y-2">
               {Object.entries(opponents).map(([level, opponent]) => (
                 <button
@@ -276,7 +338,7 @@ export default function GamePage() {
                   disabled={!stats.unlockedLevels.includes(Number(level))}
                   className={`w-full p-3 rounded-xl text-left transition-all ${
                     stats.unlockedLevels.includes(Number(level))
-                      ? selectedLevel === Number(level)
+                      ? selectedLevel === Number(level) && gameMode === 'ai'
                         ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/30'
                         : isDarkMode
                         ? 'bg-white/10 hover:bg-white/20 border border-white/20 shadow-md'
@@ -289,14 +351,14 @@ export default function GamePage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className={`font-semibold ${
-                        selectedLevel === Number(level)
+                        selectedLevel === Number(level) && gameMode === 'ai'
                           ? 'text-white'
                           : isDarkMode
                           ? 'text-white'
                           : 'text-gray-900'
                       }`}>{opponent.name}</div>
                       <div className={`text-xs ${
-                        selectedLevel === Number(level)
+                        selectedLevel === Number(level) && gameMode === 'ai'
                           ? 'text-gray-100'
                           : isDarkMode
                           ? 'text-gray-300'
@@ -336,7 +398,7 @@ export default function GamePage() {
 
           {/* Chess Board and Game Area */}
           <div className="lg:col-span-2">
-            {selectedLevel ? (
+            {selectedLevel !== null ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Left: Board and Controls */}
                 <div className="lg:col-span-2">
@@ -348,10 +410,18 @@ export default function GamePage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       <div>
                         <h3 className={`text-lg md:text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                          vs {opponents[selectedLevel]?.name}
+                          {gameMode === 'human' ? '2 Player Mode' : `vs ${opponents[selectedLevel]?.name}`}
                         </h3>
                         <div className={`mt-1 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                          <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>You: White ♔</span> · <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{opponents[selectedLevel]?.name}: Black ♚</span>
+                          {gameMode === 'human' ? (
+                            <>
+                              <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Player 1: White ♔</span> · <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>Player 2: Black ♚</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>You: White ♔</span> · <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{opponents[selectedLevel]?.name}: Black ♚</span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className={`flex items-center gap-3 px-4 py-2 rounded-lg shadow-md ${
@@ -360,12 +430,15 @@ export default function GamePage() {
                           : 'bg-white/70 border border-white/60'
                       }`}>
                         <div className="text-2xl">
-                          {isPlayerTurn ? '♔' : '♚'}
+                          {game.turn() === 'w' ? '♔' : '♚'}
                         </div>
                         <div>
                           <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Turn</div>
                           <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {isPlayerTurn ? 'Your move' : 'AI thinking...'}
+                            {gameMode === 'human'
+                              ? (game.turn() === 'w' ? 'White to move' : 'Black to move')
+                              : (isPlayerTurn ? 'Your move' : 'AI thinking...')
+                            }
                           </div>
                         </div>
                       </div>
@@ -409,7 +482,7 @@ export default function GamePage() {
                           position: game.fen(),
                           onPieceDrop: onDrop,
                           boardOrientation: 'white',
-                          allowDragging: isPlayerTurn,
+                          allowDragging: gameMode === 'human' ? true : isPlayerTurn,
                           showNotation: true,
                           boardStyle: {
                             borderRadius: '12px',
@@ -421,19 +494,8 @@ export default function GamePage() {
 
                   <div className="flex gap-3">
                     <button
-                      onClick={undoMove}
-                      disabled={moveHistory.length < 2 || !isPlayerTurn}
-                      className={`flex-1 px-4 py-3 rounded-xl transition-all shadow-md font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-                        isDarkMode
-                          ? 'bg-white/10 hover:bg-white/20 border border-white/20 text-white disabled:bg-white/5'
-                          : 'bg-white/70 hover:bg-white/90 border border-white/60 text-gray-900 disabled:bg-gray-100'
-                      }`}
-                    >
-                      ↶ Undo
-                    </button>
-                    <button
-                      onClick={() => startGame(selectedLevel)}
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl transition-all shadow-lg font-medium"
+                      onClick={() => gameMode === 'human' ? startHumanVsHumanGame() : startGame(selectedLevel!)}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl transition-all shadow-lg font-medium"
                     >
                       New Game
                     </button>
@@ -484,7 +546,7 @@ export default function GamePage() {
                         {/* Captured by White (Player) */}
                         <div>
                           <div className={`text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            You captured:
+                            {gameMode === 'human' ? 'White captured:' : 'You captured:'}
                           </div>
                           <div className="text-2xl flex flex-wrap gap-1">
                             {capturedPieces.black.length > 0 ? (
@@ -499,7 +561,7 @@ export default function GamePage() {
                         {/* Captured by Black (AI) */}
                         <div>
                           <div className={`text-xs font-semibold mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {opponents[selectedLevel]?.name} captured:
+                            {gameMode === 'human' ? 'Black captured:' : `${opponents[selectedLevel]?.name} captured:`}
                           </div>
                           <div className="text-2xl flex flex-wrap gap-1">
                             {capturedPieces.white.length > 0 ? (
