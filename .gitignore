@@ -1,0 +1,255 @@
+# ===========================
+# Checkmate AI - Root .gitignore
+# ===========================
+
+# ===========================
+# FRONTEND (Next.js / React)
+# ===========================
+
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.*
+frontend/.yarn/*
+!frontend/.yarn/patches
+!frontend/.yarn/plugins
+!frontend/.yarn/releases
+!frontend/.yarn/versions
+
+# Testing
+frontend/coverage/
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# Production
+frontend/dist/
+
+# Misc
+frontend/.DS_Store
+frontend/*.pem
+
+# Debug logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.pnpm-debug.log*
+
+# Environment variables
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Vercel
+frontend/.vercel
+
+# TypeScript
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# ===========================
+# BACKEND (Python / FastAPI)
+# ===========================
+
+# Python cache
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/*.so
+backend/.Python
+
+# Virtual environments
+backend/env/
+backend/venv/
+backend/ENV/
+backend/env.bak/
+backend/venv.bak/
+backend/.venv/
+
+# Distribution / packaging
+backend/.eggs/
+backend/*.egg-info/
+backend/dist/
+backend/build/
+backend/wheels/
+backend/pip-wheel-metadata/
+
+# PyInstaller
+backend/*.manifest
+backend/*.spec
+
+# Unit test / coverage reports
+backend/htmlcov/
+backend/.tox/
+backend/.nox/
+backend/.coverage
+backend/.coverage.*
+backend/.cache
+backend/nosetests.xml
+backend/coverage.xml
+backend/*.cover
+backend/*.py,cover
+backend/.hypothesis/
+backend/.pytest_cache/
+
+# Flask / Django stuff
+backend/instance/
+backend/.webassets-cache
+
+# Scrapy stuff
+backend/.scrapy
+
+# Sphinx documentation
+backend/docs/_build/
+
+# PyBuilder
+backend/target/
+
+# Jupyter Notebook
+backend/.ipynb_checkpoints
+
+# IPython
+backend/profile_default/
+backend/ipython_config.py
+
+# pyenv
+backend/.python-version
+
+# Celery stuff
+backend/celerybeat-schedule
+backend/celerybeat.pid
+
+# SageMath parsed files
+backend/*.sage.py
+
+# Environment variables
+backend/.env
+backend/.env.local
+backend/.env.production
+
+# Spyder project settings
+backend/.spyderproject
+backend/.spyproject
+
+# Rope project settings
+backend/.ropeproject
+
+# mkdocs documentation
+backend/site
+
+# mypy
+backend/.mypy_cache/
+backend/.dmypy.json
+backend/dmypy.json
+
+# Pyre type checker
+backend/.pyre/
+
+# Stockfish binaries (Windows)
+backend/stockfish/*.exe
+backend/stockfish/*.dll
+
+# Stockfish binaries (Linux/Mac) - downloaded during build
+backend/stockfish/stockfish-linux
+backend/stockfish/stockfish-ubuntu*
+backend/stockfish/*.tar
+backend/stockfish/*.zip
+
+# Uvicorn log
+backend/uvicorn.log
+
+# ===========================
+# IDE / EDITOR
+# ===========================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains (PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ===========================
+# OPERATING SYSTEM
+# ===========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+
+# ===========================
+# OTHER
+# ===========================
+
+# Git
+*.orig
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Database files (if you add database later)
+*.db
+*.sqlite
+*.sqlite3
+
+# Deployment-specific files
+.vercel
+.render
+.railway
+
+# Security - never commit these!
+*.pem
+*.key
+*.cert
+*.crt
+secrets.json
+credentials.json
+
+# Optional: Uncomment if you want to ignore deployment docs
+# DEPLOYMENT.md
+# BACKEND_DEPLOYMENT.md
